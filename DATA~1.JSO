@@ -1,0 +1,4 @@
+{
+  "deprecated": true,
+  "note": "이 파일은 더 이상 쓰지 않습니다. smp.json, rec.json, widget.png 를 보세요. GitHub에 올릴 때 이 파일은 넣지 않아도 됩니다."
+}
