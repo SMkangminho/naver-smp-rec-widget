@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>SMP·REC 가격 위젯</title>
+<style>
+  * { box-sizing: border-box; }
+  html, body {
+    margin: 0;
+    padding: 0;
+    width: 170px;
+    font-family: -apple-system, "Malgun Gothic", "맑은 고딕", sans-serif;
+    background: transparent;
+  }
+  .card {
+    width: 170px;
+    padding: 10px 9px;
+    background: linear-gradient(180deg, #14213d 0%, #1b2a4a 100%);
+    color: #f2f4f8;
+    border-radius: 6px;
+    font-size: 11px;
+  }
+  .title {
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.3px;
+    color: #9fd0ff;
+    margin-bottom: 6px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+  .dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: #4ade80;
+    display: inline-block;
+    margin-left: 4px;
+    box-shadow: 0 0 4px #4ade80;
+  }
+  .row {
+    background: rgba(255,255,255,0.06);
+    border-radius: 5px;
+    padding: 6px 7px;
+    margin-bottom: 6px;
+    position: relative;
+  }
+  .row:last-child { margin-bottom: 0; }
+  .label {
+    font-size: 10px;
+    color: #b8c4dd;
+    margin-bottom: 2px;
+    display: flex;
+    justify-content: space-between;
+  }
+  .badge {
+    font-size: 8px;
+    padding: 1px 4px;
+    border-radius: 3px;
+    background: rgba(255,255,255,0.12);
+    color: #9fd0ff;
+  }
+  .badge.auto { color: #4ade80; }
+  .price {
+    font-size: 16px;
+    font-weight: 800;
+    color: #ffffff;
+    line-height: 1.2;
+  }
+  .unit {
+    font-size: 10px;
+    font-weight: 400;
+    color: #b8c4dd;
+    margin-left: 2px;
+  }
+  .meta {
+    font-size: 9px;
+    color: #8894ac;
+    margin-top: 2px;
+  }
+  .footer {
+    margin-top: 6px;
+    font-size: 8.5px;
+    color: #6b7896;
+    text-align: right;
+  }
+  a { color: inherit; text-decoration: none; }
+</style>
+</head>
+<body>
+  <div class="card">
+    <div class="title">전력시장 가격<span class="dot" id="statusDot"></span></div>
+
+    <div class="row">
+      <div class="label"><span>SMP (육지)</span><span class="badge" id="smpBadge">-</span></div>
+      <div class="price" id="smpPrice">-<span class="unit">원/kWh</span></div>
+      <div class="meta" id="smpMeta">불러오는 중...</div>
+    </div>
+
+    <div class="row">
+      <div class="label"><span>REC 현물 평균가</span><span class="badge" id="recBadge">-</span></div>
+      <div class="price" id="recPrice">-<span class="unit">원</span></div>
+      <div class="meta" id="recMeta">불러오는 중...</div>
+    </div>
+
+    <div class="footer" id="updatedAt">갱신: -</div>
+  </div>
+
+<script>
+  var REFRESH_MS = 5 * 60 * 1000; // 5분마다 다시 조회
+
+  function fmtNum(n) {
+    if (n === null || n === undefined || isNaN(n)) return "-";
+    return Number(n).toLocaleString("ko-KR");
+  }
+
+  function fmtDate(yyyymmdd) {
+    if (!yyyymmdd || String(yyyymmdd).length !== 8) return "";
+    var s = String(yyyymmdd);
+    return s.slice(0,4) + "." + s.slice(4,6) + "." + s.slice(6,8);
+  }
+
+  function fmtTime(iso) {
+    if (!iso) return "-";
+    var d = new Date(iso);
+    if (isNaN(d.getTime())) return "-";
+    var hh = String(d.getHours()).padStart(2, "0");
+    var mm = String(d.getMinutes()).padStart(2, "0");
+    return hh + ":" + mm;
+  }
+
+  function setBadge(el, mode) {
+    el.textContent = mode === "auto" ? "자동" : "수동";
+    el.className = "badge" + (mode === "auto" ? " auto" : "");
+  }
+
+  function loadSmp() {
+    fetch("./smp.json?t=" + Date.now(), { cache: "no-store" })
+      .then(function(r){ return r.json(); })
+      .then(function(d){
+        setBadge(document.getElementById("smpBadge"), d.mode);
+        if (d.price != null) {
+          document.getElementById("smpPrice").innerHTML =
+            fmtNum(d.price) + '<span class="unit">' + (d.unit || "원/kWh") + '</span>';
+          document.getElementById("smpMeta").textContent =
+            fmtDate(d.tradeDay) + " " + (d.tradHour != null ? d.tradHour + "시 기준" : "");
+        } else {
+          document.getElementById("smpMeta").textContent = "아직 값이 없어요";
+        }
+        document.getElementById("updatedAt").textContent = "SMP 갱신: " + fmtTime(d.updatedAt);
+      })
+      .catch(function(){
+        document.getElementById("smpMeta").textContent = "불러오기 실패";
+      });
+  }
+
+  function loadRec() {
+    fetch("./rec.json?t=" + Date.now(), { cache: "no-store" })
+      .then(function(r){ return r.json(); })
+      .then(function(d){
+        setBadge(document.getElementById("recBadge"), d.mode);
+        if (d.landAvgPrc != null) {
+          document.getElementById("recPrice").innerHTML =
+            fmtNum(d.landAvgPrc) + '<span class="unit">' + (d.unit || "원") + '</span>';
+          document.getElementById("recMeta").textContent = fmtDate(d.bzDd) + " 거래일 기준";
+        } else {
+          document.getElementById("recMeta").textContent = "아직 값이 없어요";
+        }
+      })
+      .catch(function(){
+        document.getElementById("recMeta").textContent = "불러오기 실패";
+      });
+  }
+
+  function loadAll() {
+    loadSmp();
+    loadRec();
+  }
+
+  loadAll();
+  setInterval(loadAll, REFRESH_MS);
+</script>
+</body>
+</html>
