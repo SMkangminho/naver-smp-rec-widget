@@ -2,10 +2,8 @@ name: Update SMP/REC widget image
 
 on:
   schedule:
-    # 매시 5분에 실행 (UTC 기준). DATA_GO_KR_KEY 비밀값이 없으면 fetch 단계는 스스로 건너뜁니다.
     - cron: "5 * * * *"
   push:
-    # smp.json / rec.json 을 GitHub 화면에서 손으로 고치고 저장하면, 그 즉시 이미지도 다시 그립니다.
     paths:
       - "smp.json"
       - "rec.json"
