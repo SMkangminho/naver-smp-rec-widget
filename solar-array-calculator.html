@@ -1,0 +1,601 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>지붕 어레이 설계 계산기</title>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css" />
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet.draw/1.0.4/leaflet.draw.css" />
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=IBM+Plex+Sans+KR:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --paper:#F4F1E8;
+    --ink:#1B2430;
+    --navy:#0F1B24;
+    --navy-2:#16262F;
+    --amber:#E07A3E;
+    --amber-dim:#C9622A;
+    --teal:#3B7D80;
+    --line:#C9C2AE;
+    --line-dark:#2C4048;
+    --ok:#3B7D5A;
+    --warn:#B6472F;
+    --panel:#FBF9F3;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;background:var(--paper);color:var(--ink);}
+  body{font-family:'IBM Plex Sans KR','IBM Plex Sans',sans-serif;font-size:14px;line-height:1.55;}
+  .wrap{max-width:1180px;margin:0 auto;padding:0 20px 80px;}
+  h1,h2,h3{font-family:'Space Grotesk','IBM Plex Sans KR',sans-serif;letter-spacing:-0.01em;margin:0;}
+  .mono{font-family:'IBM Plex Mono',monospace;}
+
+  /* ---- Header : blueprint banner ---- */
+  .hero{
+    background:
+      linear-gradient(180deg, rgba(224,122,62,0.10), rgba(224,122,62,0) 60%),
+      repeating-linear-gradient(0deg, rgba(255,255,255,0.045) 0 1px, transparent 1px 28px),
+      repeating-linear-gradient(90deg, rgba(255,255,255,0.045) 0 1px, transparent 1px 28px),
+      var(--navy);
+    color:#EDEAE0;
+    padding:46px 20px 40px;
+    border-bottom:3px solid var(--amber);
+  }
+  .hero-inner{max-width:1180px;margin:0 auto;display:flex;justify-content:space-between;align-items:flex-end;gap:24px;flex-wrap:wrap;}
+  .hero-eyebrow{
+    font-family:'IBM Plex Mono',monospace;
+    font-size:11.5px;letter-spacing:0.14em;text-transform:uppercase;
+    color:var(--amber);margin-bottom:14px;display:flex;align-items:center;gap:10px;
+  }
+  .hero-eyebrow::before{content:"";width:22px;height:1px;background:var(--amber);display:inline-block;}
+  .hero h1{font-size:clamp(26px,4vw,38px);font-weight:700;color:#fff;max-width:640px;}
+  .hero p{color:#B9C4C7;max-width:520px;margin-top:10px;font-size:14.5px;}
+  .hero-meta{
+    font-family:'IBM Plex Mono',monospace;font-size:11.5px;color:#8FA3A6;
+    text-align:right;line-height:1.9;
+  }
+  .hero-meta b{color:#EDEAE0;font-weight:600;}
+
+  /* ---- section shell ---- */
+  .section{margin-top:36px;}
+  .section-head{
+    display:flex;align-items:baseline;gap:12px;margin-bottom:14px;
+    border-bottom:1.5px solid var(--ink);padding-bottom:9px;
+  }
+  .section-num{
+    font-family:'IBM Plex Mono',monospace;color:var(--amber);font-size:13px;font-weight:600;
+  }
+  .section-head h2{font-size:19px;font-weight:600;}
+  .section-hint{margin-left:auto;font-size:12px;color:#7A7362;font-family:'IBM Plex Mono',monospace;}
+
+  .grid2{display:grid;grid-template-columns:1.35fr 1fr;gap:22px;}
+  @media (max-width:860px){.grid2{grid-template-columns:1fr;}}
+
+  .panel{
+    background:var(--panel);
+    border:1px solid var(--line);
+    padding:18px 20px;
+  }
+  .panel + .panel{margin-top:16px;}
+
+  /* map */
+  #map{height:420px;width:100%;border:1px solid var(--line-dark);filter:saturate(1.05);}
+  .map-toolbar{display:flex;gap:8px;margin-bottom:10px;flex-wrap:wrap;}
+  .map-toolbar input[type=text]{
+    flex:1;min-width:180px;padding:10px 12px;border:1px solid var(--ink);background:#fff;
+    font-family:'IBM Plex Sans KR',sans-serif;font-size:13.5px;
+  }
+  .btn{
+    padding:10px 16px;border:1px solid var(--ink);background:var(--ink);color:#fff;
+    font-family:'IBM Plex Mono',monospace;font-size:12.5px;letter-spacing:0.02em;cursor:pointer;
+    transition:background .15s, transform .05s;
+  }
+  .btn:hover{background:#000;}
+  .btn:active{transform:translateY(1px);}
+  .btn.secondary{background:transparent;color:var(--ink);}
+  .btn.secondary:hover{background:var(--ink);color:#fff;}
+  .btn.amber{background:var(--amber);border-color:var(--amber-dim);}
+  .btn.amber:hover{background:var(--amber-dim);}
+  .map-status{
+    margin-top:10px;font-family:'IBM Plex Mono',monospace;font-size:12px;color:#5B5648;
+    display:flex;justify-content:space-between;flex-wrap:wrap;gap:6px;
+  }
+  .map-status .area-readout{color:var(--amber-dim);font-weight:600;}
+  .map-help{font-size:12px;color:#7A7362;margin-top:8px;}
+
+  /* form rows */
+  .field{margin-bottom:14px;}
+  .field label{display:block;font-size:12px;color:#5B5648;margin-bottom:5px;font-family:'IBM Plex Mono',monospace;letter-spacing:0.02em;}
+  .field select, .field input[type=number]{
+    width:100%;padding:9px 10px;border:1px solid var(--ink);background:#fff;
+    font-family:'IBM Plex Sans KR',sans-serif;font-size:13.5px;
+  }
+  .field-row{display:grid;grid-template-columns:1fr 1fr;gap:12px;}
+  .seg{display:flex;border:1px solid var(--ink);}
+  .seg button{
+    flex:1;padding:8px 6px;background:#fff;border:none;border-right:1px solid var(--ink);
+    font-family:'IBM Plex Mono',monospace;font-size:12.5px;cursor:pointer;color:var(--ink);
+  }
+  .seg button:last-child{border-right:none;}
+  .seg button.active{background:var(--ink);color:#fff;}
+  .field-note{font-size:11.5px;color:#8A8470;margin-top:4px;}
+
+  /* range */
+  input[type=range]{width:100%;accent-color:var(--amber);}
+  .range-value{font-family:'IBM Plex Mono',monospace;font-weight:600;color:var(--amber-dim);}
+
+  /* spec chips for module/inverter preview */
+  .spec-chip-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:6px 14px;margin-top:10px;font-family:'IBM Plex Mono',monospace;font-size:12px;}
+  .spec-chip-grid div{display:flex;justify-content:space-between;border-bottom:1px dotted var(--line);padding-bottom:3px;}
+  .spec-chip-grid span:last-child{color:var(--ink);font-weight:600;}
+  .spec-chip-grid span:first-child{color:#8A8470;}
+
+  /* output */
+  .result-banner{
+    background:var(--navy);color:#EDEAE0;padding:22px 24px;display:flex;flex-wrap:wrap;gap:28px;
+    border:1px solid var(--line-dark);
+  }
+  .result-banner .metric{min-width:130px;}
+  .result-banner .metric .num{font-family:'Space Grotesk',sans-serif;font-size:30px;font-weight:700;color:#fff;}
+  .result-banner .metric .num small{font-size:14px;font-weight:600;color:var(--amber);margin-left:3px;}
+  .result-banner .metric .lbl{font-family:'IBM Plex Mono',monospace;font-size:11px;color:#8FA3A6;letter-spacing:0.05em;margin-top:4px;}
+
+  table.spec-table{width:100%;border-collapse:collapse;margin-top:14px;font-size:13px;}
+  table.spec-table th{
+    text-align:left;font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:0.04em;
+    color:#7A7362;text-transform:uppercase;padding:6px 8px;border-bottom:1.5px solid var(--ink);
+  }
+  table.spec-table td{padding:8px 8px;border-bottom:1px solid var(--line);font-family:'IBM Plex Mono',monospace;}
+  table.spec-table tr:last-child td{border-bottom:none;}
+  .tag{display:inline-block;padding:2px 7px;font-size:10.5px;font-family:'IBM Plex Mono',monospace;border:1px solid currentColor;}
+  .tag.ok{color:var(--ok);}
+  .tag.warn{color:var(--warn);}
+
+  .note-box{
+    border-left:3px solid var(--amber);background:#FBF3EA;padding:12px 14px;font-size:12.5px;color:#5B5648;margin-top:16px;
+  }
+  .footer-note{margin-top:40px;padding-top:16px;border-top:1px solid var(--line);font-size:11.5px;color:#8A8470;font-family:'IBM Plex Mono',monospace;}
+  .placeholder{color:#8A8470;font-size:13px;padding:30px 10px;text-align:center;border:1px dashed var(--line);}
+</style>
+</head>
+<body>
+
+<div class="hero">
+  <div class="hero-inner">
+    <div>
+      <div class="hero-eyebrow">Rooftop PV Array Estimator</div>
+      <h1>지붕 어레이 설계 계산기</h1>
+      <p>주소를 검색해 위성지도에서 지붕 외곽선을 그리면, 설치 가능 용량과 인버터 직·병렬 구성을 자동으로 추정합니다.</p>
+    </div>
+    <div class="hero-meta">
+      TILT ANGLE <b>15°</b> FIXED<br>
+      MODULE DB <b>2</b> LOADED · INVERTER DB <b>4</b> LOADED<br>
+      MODE <b>ESTIMATE — NOT FINAL DESIGN</b>
+    </div>
+  </div>
+</div>
+
+<div class="wrap">
+
+  <!-- 01 : ADDRESS + MAP -->
+  <div class="section">
+    <div class="section-head">
+      <span class="section-num">01</span>
+      <h2>설치 위치 · 지붕 외곽선</h2>
+      <span class="section-hint">SATELLITE TRACE</span>
+    </div>
+    <div class="panel">
+      <div class="map-toolbar">
+        <input type="text" id="addressInput" placeholder="주소를 입력하세요 (예: 서울특별시 중구 세종대로 110)">
+        <button class="btn amber" id="searchBtn">위치 검색</button>
+        <button class="btn secondary" id="clearDrawBtn">외곽선 지우기</button>
+      </div>
+      <div id="map"></div>
+      <div class="map-status">
+        <span>지도 우측 상단 <b>폴리곤 도구(⬠)</b>로 지붕 외곽선을 클릭해 그려주세요. 더블클릭으로 완료.</span>
+        <span class="area-readout" id="areaReadout">외곽선 없음 — 0 m²</span>
+      </div>
+      <div class="map-help">위성 이미지 기반 추적은 참고용입니다. 실제 지붕 형태·장애물·경사는 현장 실측으로 확인하세요. 지오코딩은 OpenStreetMap Nominatim을 사용합니다.</div>
+    </div>
+  </div>
+
+  <!-- 02 : ARRAY CONFIG -->
+  <div class="section">
+    <div class="section-head">
+      <span class="section-num">02</span>
+      <h2>어레이 구성</h2>
+      <span class="section-hint">MODULE / LAYOUT</span>
+    </div>
+    <div class="grid2">
+      <div class="panel">
+        <div class="field-row">
+          <div class="field">
+            <label>모듈 선택</label>
+            <select id="moduleSelect"></select>
+          </div>
+          <div class="field">
+            <label>모듈 설치 방향</label>
+            <div class="seg" id="orientationSeg">
+              <button data-v="portrait" class="active">세로형 (Portrait)</button>
+              <button data-v="landscape">가로형 (Landscape)</button>
+            </div>
+          </div>
+        </div>
+        <div class="field">
+          <label>지붕 유효 활용률 — 장애물·이격거리·미관 제외분 반영</label>
+          <input type="range" id="utilRange" min="30" max="95" value="72">
+          <div class="field-note">활용률: <span class="range-value" id="utilValue">72%</span> · 배관, 실외기, 소방 통로, 파라펫 이격 등을 감안한 실사용 비율입니다.</div>
+        </div>
+        <div class="spec-chip-grid" id="moduleSpecChips"></div>
+      </div>
+
+      <div class="panel">
+        <div class="field">
+          <label>어레이 경사각 (Tilt)</label>
+          <input type="number" id="tiltInput" value="15" min="0" max="60" step="1">
+          <div class="field-note">기본값 15°로 설정됨 (요청 반영). 열간 이격거리 계산에 사용됩니다.</div>
+        </div>
+        <div class="field-row">
+          <div class="field">
+            <label>겨울철 최저 설계온도 (℃)</label>
+            <input type="number" id="tminInput" value="-15">
+          </div>
+          <div class="field">
+            <label>여름철 최고 설계온도 (℃)</label>
+            <input type="number" id="tmaxInput" value="40">
+          </div>
+        </div>
+        <div class="field-note">직렬 모듈 수(최대/최소) 산정에 사용됩니다. 위치 미지정 시 국내 일반값(−15℃ / 40℃)이 기본 적용됩니다.</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 03 : INVERTER -->
+  <div class="section">
+    <div class="section-head">
+      <span class="section-num">03</span>
+      <h2>인버터 선택</h2>
+      <span class="section-hint">MPPT / STRING</span>
+    </div>
+    <div class="panel">
+      <div class="field">
+        <label>인버터 모델</label>
+        <select id="inverterSelect"></select>
+      </div>
+      <div class="spec-chip-grid" id="inverterSpecChips"></div>
+    </div>
+  </div>
+
+  <!-- 04 : RESULT -->
+  <div class="section">
+    <div class="section-head">
+      <span class="section-num">04</span>
+      <h2>설치 가능 용량 · 직병렬 구성</h2>
+      <span class="section-hint">RESULT</span>
+    </div>
+
+    <div id="resultEmpty" class="placeholder">지붕 외곽선을 그리면 이 영역에 계산 결과가 표시됩니다.</div>
+
+    <div id="resultBody" style="display:none;">
+      <div class="result-banner">
+        <div class="metric">
+          <div class="num" id="outCapacity">0<small>kWp</small></div>
+          <div class="lbl">추정 설치용량</div>
+        </div>
+        <div class="metric">
+          <div class="num" id="outModuleCount">0<small>장</small></div>
+          <div class="lbl">모듈 수량</div>
+        </div>
+        <div class="metric">
+          <div class="num" id="outInverterCount">0<small>대</small></div>
+          <div class="lbl">필요 인버터</div>
+        </div>
+        <div class="metric">
+          <div class="num" id="outDcAc">0<small>x</small></div>
+          <div class="lbl">DC/AC 비율</div>
+        </div>
+      </div>
+
+      <div class="panel">
+        <table class="spec-table">
+          <tr><th>항목</th><th>값</th><th>비고</th></tr>
+          <tr><td>지붕 외곽선 면적</td><td id="rowRoofArea">-</td><td>위성지도 트레이스 기준</td></tr>
+          <tr><td>유효 설치면적</td><td id="rowUsableArea">-</td><td>활용률 적용</td></tr>
+          <tr><td>열간 이격거리(Row Pitch)</td><td id="rowPitch">-</td><td>동지 태양고도 기준 무음영</td></tr>
+          <tr><td>직렬 모듈 수 (최소 ~ 최대)</td><td id="rowSeriesRange">-</td><td>MPPT 전압범위 · Voc/Vmp 온도보정</td></tr>
+          <tr><td>권장 직렬 수</td><td id="rowSeriesRec">-</td><td>범위 내 중간값 채택</td></tr>
+          <tr><td>MPPT당 병렬 스트링 수</td><td id="rowParallelPerMppt">-</td><td>MPPT 최대전류 ÷ 모듈 Isc</td></tr>
+          <tr><td>인버터 1대당 최대 스트링 수</td><td id="rowStringsPerInv">-</td><td>MPPT 수 × 병렬수</td></tr>
+          <tr><td>인버터 1대당 수용 모듈 수</td><td id="rowModulesPerInv">-</td><td>직렬수 × 스트링수</td></tr>
+          <tr><td>총 스트링 수</td><td id="rowTotalStrings">-</td><td>-</td></tr>
+        </table>
+      </div>
+
+      <div class="note-box" id="warnBox" style="display:none;"></div>
+
+      <div class="note-box">
+        본 결과는 위성 이미지 트레이스와 데이터시트 수치로 산출한 <b>참고용 추정치</b>입니다. 지붕 경사·방위, 그림자 장애물, 구조 내력, 실제 배선 손실은 반영되지 않았습니다. 최종 시공 설계는 현장 실측과 전문 설계 검토를 거쳐야 합니다.
+      </div>
+    </div>
+  </div>
+
+  <div class="footer-note">
+    MODULE DATA — Hanwha Q.TRON XL-G2R.9/BFG 645W · HD Hyundai HiS-T645NJ-ES 645W ·
+    INVERTER DATA — Delta M110A_284 · Growatt MAX125KTL3-X LV / MAX50KTL3 LV / MID36KTL3-X2
+  </div>
+
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet.draw/1.0.4/leaflet.draw.js"></script>
+<script>
+/* =========================================================
+   DATA — collected datasheet values from conversation
+   ========================================================= */
+const MODULES = {
+  hanwha645: {
+    label: "한화 Q.TRON XL-G2R.9/BFG 645W",
+    pmax: 645, voc: 56.88, isc: 13.85, vmp: 48.78, imp: 13.22,
+    betaVoc: -0.25, // %/K
+    width: 1.134, height: 2.465 // m
+  },
+  hyundai645: {
+    label: "현대 HiS-T645NJ-ES 645W",
+    pmax: 645, voc: 57.61, isc: 14.14, vmp: 47.58, imp: 13.56,
+    betaVoc: -0.25,
+    width: 1.134, height: 2.465
+  }
+};
+
+const INVERTERS = {
+  delta110: {
+    label: "델타 M110A_284 (110kW)",
+    ratedKw: 110, mpptMin: 500, mpptMax: 800, sysMaxV: 1000,
+    mpptCount: 8, mpptMaxCurrent: 39.8
+  },
+  growatt125: {
+    label: "그로와트 MAX 125KTL3-X LV (125kW)",
+    ratedKw: 125, mpptMin: 180, mpptMax: 1000, sysMaxV: 1100,
+    mpptCount: 10, mpptMaxCurrent: 32
+  },
+  growatt50: {
+    label: "그로와트 MAX 50KTL3 LV (50kW)",
+    ratedKw: 50, mpptMin: 200, mpptMax: 1000, sysMaxV: 1100,
+    mpptCount: 6, mpptMaxCurrent: 26
+  },
+  growatt36: {
+    label: "그로와트 MID 36KTL3-X2 (36kW)",
+    ratedKw: 36, mpptMin: 200, mpptMax: 1000, sysMaxV: 1100,
+    mpptCount: 3, mpptMaxCurrent: 32
+  }
+};
+
+/* =========================================================
+   MAP SETUP
+   ========================================================= */
+const map = L.map('map', {zoomControl:true}).setView([37.5665, 126.9780], 17);
+
+L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
+  maxZoom: 21,
+  attribution: 'Esri World Imagery'
+}).addTo(map);
+
+const drawnItems = new L.FeatureGroup();
+map.addLayer(drawnItems);
+
+const drawControl = new L.Control.Draw({
+  draw: {
+    polygon: { shapeOptions:{ color:'#E07A3E', weight:2, fillOpacity:0.18 } },
+    marker:false, circle:false, circlemarker:false, rectangle:false, polyline:false
+  },
+  edit: { featureGroup: drawnItems, remove:false }
+});
+map.addControl(drawControl);
+
+let roofAreaM2 = 0;
+
+function polygonAreaM2(latlngs){
+  // planar approximation suited for rooftop-scale polygons
+  const R = 6371000;
+  let latSum = 0;
+  latlngs.forEach(p => latSum += p.lat);
+  const lat0 = (latSum/latlngs.length) * Math.PI/180;
+  const pts = latlngs.map(p => ({
+    x: R * (p.lng*Math.PI/180) * Math.cos(lat0),
+    y: R * (p.lat*Math.PI/180)
+  }));
+  let area = 0;
+  for(let i=0;i<pts.length;i++){
+    const j=(i+1)%pts.length;
+    area += pts[i].x*pts[j].y - pts[j].x*pts[i].y;
+  }
+  return Math.abs(area/2);
+}
+
+map.on(L.Draw.Event.CREATED, function(e){
+  drawnItems.clearLayers();
+  drawnItems.addLayer(e.layer);
+  const latlngs = e.layer.getLatLngs()[0];
+  roofAreaM2 = polygonAreaM2(latlngs);
+  document.getElementById('areaReadout').textContent = `외곽선 1개 — ${roofAreaM2.toFixed(1)} m²`;
+  runCalc();
+});
+
+document.getElementById('clearDrawBtn').onclick = function(){
+  drawnItems.clearLayers();
+  roofAreaM2 = 0;
+  document.getElementById('areaReadout').textContent = '외곽선 없음 — 0 m²';
+  document.getElementById('resultEmpty').style.display='block';
+  document.getElementById('resultBody').style.display='none';
+};
+
+/* geocoding via Nominatim (no key required) */
+document.getElementById('searchBtn').onclick = async function(){
+  const q = document.getElementById('addressInput').value.trim();
+  if(!q) return;
+  const btn = this;
+  btn.textContent = '검색중...';
+  try{
+    const res = await fetch('https://nominatim.openstreetmap.org/search?format=json&limit=1&q=' + encodeURIComponent(q));
+    const data = await res.json();
+    if(data && data.length){
+      const lat = parseFloat(data[0].lat), lon = parseFloat(data[0].lon);
+      map.setView([lat, lon], 20);
+    } else {
+      alert('주소를 찾지 못했습니다. 더 구체적인 주소로 다시 검색하거나, 지도를 직접 이동해 위치를 맞춰주세요.');
+    }
+  } catch(err){
+    alert('주소 검색 서비스에 접속하지 못했습니다. 지도를 직접 이동/확대해 위치를 맞춘 뒤 지붕 외곽선을 그려주세요.');
+  }
+  btn.textContent = '위치 검색';
+};
+
+/* =========================================================
+   FORM STATE
+   ========================================================= */
+const moduleSelect = document.getElementById('moduleSelect');
+Object.entries(MODULES).forEach(([k,m])=>{
+  const opt = document.createElement('option');
+  opt.value = k; opt.textContent = m.label;
+  moduleSelect.appendChild(opt);
+});
+
+const inverterSelect = document.getElementById('inverterSelect');
+Object.entries(INVERTERS).forEach(([k,inv])=>{
+  const opt = document.createElement('option');
+  opt.value = k; opt.textContent = inv.label;
+  inverterSelect.appendChild(opt);
+});
+
+let orientation = 'portrait';
+document.querySelectorAll('#orientationSeg button').forEach(btn=>{
+  btn.onclick = function(){
+    document.querySelectorAll('#orientationSeg button').forEach(b=>b.classList.remove('active'));
+    this.classList.add('active');
+    orientation = this.dataset.v;
+    runCalc();
+  };
+});
+
+const utilRange = document.getElementById('utilRange');
+utilRange.oninput = function(){
+  document.getElementById('utilValue').textContent = this.value + '%';
+  runCalc();
+};
+
+['tiltInput','tminInput','tmaxInput'].forEach(id=>{
+  document.getElementById(id).addEventListener('input', runCalc);
+});
+moduleSelect.addEventListener('change', ()=>{ renderModuleChips(); runCalc(); });
+inverterSelect.addEventListener('change', ()=>{ renderInverterChips(); runCalc(); });
+
+function renderModuleChips(){
+  const m = MODULES[moduleSelect.value];
+  document.getElementById('moduleSpecChips').innerHTML = `
+    <div><span>Pmax</span><span>${m.pmax} W</span></div>
+    <div><span>Voc</span><span>${m.voc} V</span></div>
+    <div><span>Isc</span><span>${m.isc} A</span></div>
+    <div><span>Vmp</span><span>${m.vmp} V</span></div>
+    <div><span>Imp</span><span>${m.imp} A</span></div>
+    <div><span>Voc 온도계수(β)</span><span>${m.betaVoc} %/K</span></div>
+    <div><span>크기</span><span>${m.width}×${m.height} m</span></div>
+  `;
+}
+function renderInverterChips(){
+  const inv = INVERTERS[inverterSelect.value];
+  document.getElementById('inverterSpecChips').innerHTML = `
+    <div><span>정격출력</span><span>${inv.ratedKw} kW</span></div>
+    <div><span>MPPT 전압범위</span><span>${inv.mpptMin}-${inv.mpptMax} V</span></div>
+    <div><span>최대 시스템전압</span><span>${inv.sysMaxV} V</span></div>
+    <div><span>MPPT 수</span><span>${inv.mpptCount} 개</span></div>
+    <div><span>MPPT당 최대전류</span><span>${inv.mpptMaxCurrent} A</span></div>
+  `;
+}
+renderModuleChips();
+renderInverterChips();
+
+/* =========================================================
+   CORE CALCULATION
+   ========================================================= */
+function runCalc(){
+  if(roofAreaM2 <= 0){
+    document.getElementById('resultEmpty').style.display='block';
+    document.getElementById('resultBody').style.display='none';
+    return;
+  }
+  document.getElementById('resultEmpty').style.display='none';
+  document.getElementById('resultBody').style.display='block';
+
+  const m = MODULES[moduleSelect.value];
+  const inv = INVERTERS[inverterSelect.value];
+  const tilt = parseFloat(document.getElementById('tiltInput').value) || 0;
+  const tmin = parseFloat(document.getElementById('tminInput').value);
+  const tmax = parseFloat(document.getElementById('tmaxInput').value);
+  const util = parseFloat(utilRange.value)/100;
+
+  const usableArea = roofAreaM2 * util;
+
+  // slant length depends on orientation
+  const slant = orientation === 'portrait' ? m.height : m.width;
+  const moduleWidthAcross = orientation === 'portrait' ? m.width : m.height;
+
+  // worst-case sun altitude at solar noon, winter solstice, assume latitude ~ current map center
+  const center = map.getCenter();
+  const latDeg = Math.abs(center.lat) || 37.5;
+  let sunAltDeg = 90 - latDeg - 23.45;
+  if(sunAltDeg < 10) sunAltDeg = 10; // guard against unrealistic low-latitude/high-latitude edge cases
+  const sunAltRad = sunAltDeg * Math.PI/180;
+  const tiltRad = tilt * Math.PI/180;
+
+  const pitch = slant*Math.cos(tiltRad) + (slant*Math.sin(tiltRad))/Math.tan(sunAltRad);
+  const effectiveAreaPerModule = moduleWidthAcross * pitch;
+
+  const moduleCount = Math.max(0, Math.floor(usableArea / effectiveAreaPerModule));
+  const totalCapacityKw = moduleCount * m.pmax / 1000;
+
+  // series count (min/max) from inverter MPPT window + module temp-corrected Voc/Vmp
+  const vocCold = m.voc * (1 + (tmin-25)*m.betaVoc/100);
+  const vmpHot  = m.vmp * (1 + (tmax-25)*m.betaVoc/100);
+  const sysVmax = Math.min(inv.sysMaxV, inv.mpptMax);
+
+  const seriesMax = Math.floor(sysVmax / vocCold);
+  const seriesMin = Math.ceil(inv.mpptMin / vmpHot);
+  const seriesRec = seriesMin <= seriesMax ? Math.round((seriesMin+seriesMax)/2) : seriesMax;
+
+  const parallelPerMppt = Math.max(1, Math.floor(inv.mpptMaxCurrent / m.isc));
+  const stringsPerInverter = inv.mpptCount * parallelPerMppt;
+  const modulesPerInverter = seriesRec * stringsPerInverter;
+
+  const invertersNeeded = Math.max(1, Math.ceil(moduleCount / modulesPerInverter));
+  const totalStrings = Math.ceil(moduleCount / seriesRec);
+  const dcAc = (totalCapacityKw / (invertersNeeded * inv.ratedKw));
+
+  // ---- render ----
+  document.getElementById('outCapacity').innerHTML = totalCapacityKw.toFixed(1) + '<small>kWp</small>';
+  document.getElementById('outModuleCount').innerHTML = moduleCount + '<small>장</small>';
+  document.getElementById('outInverterCount').innerHTML = invertersNeeded + '<small>대</small>';
+  document.getElementById('outDcAc').innerHTML = dcAc.toFixed(2) + '<small>x</small>';
+
+  document.getElementById('rowRoofArea').textContent = roofAreaM2.toFixed(1) + ' m²';
+  document.getElementById('rowUsableArea').textContent = usableArea.toFixed(1) + ' m² (활용률 ' + Math.round(util*100) + '%)';
+  document.getElementById('rowPitch').textContent = pitch.toFixed(2) + ' m (위도 약 ' + latDeg.toFixed(1) + '°, 동지 태양고도 ' + sunAltDeg.toFixed(1) + '° 가정)';
+
+  if(seriesMin > seriesMax){
+    document.getElementById('rowSeriesRange').innerHTML = '<span class="tag warn">구성 불가</span>';
+    document.getElementById('rowSeriesRec').textContent = '-';
+    document.getElementById('warnBox').style.display='block';
+    document.getElementById('warnBox').textContent = '선택한 모듈·인버터·설계온도 조합에서는 직렬 최소 수(' + seriesMin + ')가 최대 수(' + seriesMax + ')보다 큽니다. 인버터 MPPT 범위 또는 모듈을 다시 선택해주세요.';
+  } else {
+    document.getElementById('rowSeriesRange').textContent = seriesMin + ' ~ ' + seriesMax + ' 장';
+    document.getElementById('rowSeriesRec').textContent = seriesRec + ' 장';
+    document.getElementById('warnBox').style.display='none';
+  }
+
+  document.getElementById('rowParallelPerMppt').textContent = parallelPerMppt + ' 스트링/MPPT';
+  document.getElementById('rowStringsPerInv').textContent = stringsPerInverter + ' 스트링';
+  document.getElementById('rowModulesPerInv').textContent = modulesPerInverter + ' 장';
+  document.getElementById('rowTotalStrings').textContent = totalStrings + ' 스트링';
+}
+</script>
+</body>
+</html>
