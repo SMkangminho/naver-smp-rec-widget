@@ -3,6 +3,7 @@ import json
 import os
 import re
 import sys
+import time
 import urllib.request
 import urllib.parse
 from datetime import datetime, timezone
@@ -10,7 +11,6 @@ from datetime import datetime, timezone
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 SMP_PATH = os.path.join(BASE_DIR, "smp.json")
 REC_PATH = os.path.join(BASE_DIR, "rec.json")
-
 SERVICE_KEY = os.environ.get("DATA_GO_KR_KEY")
 
 
@@ -33,16 +33,13 @@ def fetch_smp():
     params = urllib.parse.urlencode({"ServiceKey": SERVICE_KEY, "areaCd": "1"})
     url = f"https://openapi.kpx.or.kr/openapi/smp1hToday/getSmp1hToday?{params}"
     text = http_get(url)
-
     m = re.search(r"<resultCode>(.*?)</resultCode>", text)
     if not m or m.group(1).strip() != "00":
         msg = re.search(r"<resultMsg>(.*?)</resultMsg>", text)
         raise RuntimeError(f"SMP API 오류: {msg.group(1) if msg else text[:200]}")
-
     items = re.findall(r"<item>([\s\S]*?)</item>", text)
     if not items:
         raise RuntimeError("SMP API: item 데이터 없음")
-
     latest = None
     for item in items:
         hour_m = re.search(r"<tradHour>(.*?)</tradHour>", item)
@@ -57,10 +54,8 @@ def fetch_smp():
             continue
         if latest is None or hour > latest["tradHour"]:
             latest = {"tradHour": hour, "smp": smp, "tradeDay": day_m.group(1) if day_m else None}
-
     if latest is None:
         raise RuntimeError("SMP API: 유효한 시간대 데이터 없음")
-
     return {
         "mode": "auto",
         "updatedAt": datetime.now(timezone.utc).isoformat(),
@@ -82,11 +77,9 @@ def fetch_rec():
     url = f"https://apis.data.go.kr/B552115/RecMarketInfo2/getRecMarketInfo2?{params}"
     text = http_get(url)
     data = json.loads(text)
-
     header = data.get("header") or (data.get("response") or {}).get("header")
     if not header or header.get("resultCode") != "00":
         raise RuntimeError(f"REC API 오류: {header.get('resultMsg') if header else text[:200]}")
-
     body = data.get("body") or (data.get("response") or {}).get("body") or {}
     items = ((body.get("items") or {}).get("item"))
     item = items[0] if isinstance(items, list) else items
