@@ -14,10 +14,19 @@ REC_PATH = os.path.join(BASE_DIR, "rec.json")
 SERVICE_KEY = os.environ.get("DATA_GO_KR_KEY")
 
 
-def http_get(url):
+def http_get(url, retries=3, timeout=25):
     req = urllib.request.Request(url, headers={"User-Agent": "Mozilla/5.0"})
-    with urllib.request.urlopen(req, timeout=20) as res:
-        return res.read().decode("utf-8", errors="replace")
+    last_err = None
+    for attempt in range(1, retries + 1):
+        try:
+            with urllib.request.urlopen(req, timeout=timeout) as res:
+                return res.read().decode("utf-8", errors="replace")
+        except Exception as e:
+            last_err = e
+            print(f"  (http_get 시도 {attempt}/{retries} 실패: {e})")
+            if attempt < retries:
+                time.sleep(3)
+    raise last_err
 
 
 def fetch_smp():
