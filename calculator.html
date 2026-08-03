@@ -310,10 +310,7 @@
   // --- 반복 방문자에게 문의 폼 안내 (localStorage 기반, 서버 없이 동작) ---
   // 페이지 진입 30초 후 표시. 한 번이라도 닫으면(X 또는 "나중에 할게요") 이후로는 다시 뜨지 않음.
   (function () {
-    var DISMISS_KEY = "calc_modal_dismissed";
     var SHOW_DELAY_MS = 30000;
-
-    if (localStorage.getItem(DISMISS_KEY) === "true") return;
 
     var $modal = document.getElementById("inquiryModal");
     var $close = document.getElementById("modalClose");
