@@ -150,7 +150,7 @@
     </div>
     <div class="hero-meta">
       TILT ANGLE <b>15°</b> DEFAULT<br>
-      MODULE DB <b>2</b> LOADED · INVERTER DB <b>4</b> LOADED<br>
+      MODULE DB <b>7</b> LOADED · INVERTER DB <b>7</b> LOADED<br>
       MODE <b>ESTIMATE — NOT FINAL DESIGN</b>
     </div>
   </div>
@@ -168,7 +168,7 @@
       </div>
       <div id="map"></div>
       <div class="map-status">
-        <span>지도 우측 상단 <b>폴리곤 도구(⬠)</b>로 지붕면 하나를 그리고 더블클릭으로 완료하세요. <b>여러 개의 지붕면(구역)을 계속 이어서 그릴 수 있습니다</b> — 별도 건물, 여러 지붕 경사면 등.</span>
+        <span>지도 우측 상단 <b>폴리곤 도구(⬠)</b>로 구역을 그리고 더블클릭으로 완료하세요. <b>여러 개의 구역을 계속 이어서 그릴 수 있습니다</b> — 별도 건물, 여러 지붕 경사면 등.</span>
         <span class="area-readout" id="areaReadout">구역 0개 — 0 m²</span>
       </div>
       <div id="zoneChips"></div>
@@ -177,13 +177,13 @@
         <span><span class="swatch" style="border:2px dashed #9fd0ff;background:transparent;"></span>지붕 구역 외곽선</span>
         <span><span class="swatch" style="border:1.5px dashed #EDEAE0;background:transparent;"></span>이격거리 적용 경계</span>
       </div>
-      <div class="map-help">각 구역은 A, B, C… 로 자동 라벨링되며, 독립적으로 배치·계산된 뒤 합산됩니다. 위성 이미지 기반 추적은 참고용입니다. 배치도는 남향 고정 어레이를 가정한 단순 격자 배치이며, 실제 지붕 형태·방위·장애물은 현장 실측으로 확인하세요. 지오코딩은 OpenStreetMap Nominatim을 사용합니다.</div>
+      <div class="map-help">각 구역은 A, B, C… 로 자동 라벨링되며, 독립적으로 배치·계산된 뒤 합산됩니다. 위성 이미지 기반 추적은 참고용입니다. 배치도는 남향 고정 어레이를 가정한 단순 격자 배치이며, 실제 지붕 형태·방위·장애물은 현장 실측으로 확인하세요. 지오코딩은 V-WORLD를 사용합니다.</div>
     </div>
   </div>
   <!-- 02 -->
   <div class="section">
     <div class="section-head"><span class="section-num">02</span><h2>어레이 구성</h2><span class="section-hint">MODULE / LAYOUT (구역별 독립 설정)</span></div>
-    <div class="zone-config-hint" id="zoneConfigHint">01번에서 지붕 구역을 하나 이상 그리면, 구역별로 아래에서 개별 설정할 수 있습니다.</div>
+    <div class="zone-config-hint" id="zoneConfigHint">01번에서 구역을 하나 이상 그리면, 구역별로 아래에서 개별 설정할 수 있습니다.</div>
     <div class="zone-config-tabs" id="zoneConfigTabs"></div>
     <div class="grid2 disabled" id="arrayConfigGrid">
       <div class="panel">
@@ -191,8 +191,8 @@
           <div class="field"><label>모듈 선택</label><select id="moduleSelect"></select></div>
           <div class="field"><label>모듈 설치 방향</label>
             <div class="seg" id="orientationSeg">
-              <button data-v="portrait" class="active">세로형 (Portrait)</button>
-              <button data-v="landscape">가로형 (Landscape)</button>
+              <button data-v="portrait" class="active">세로형 </button>
+              <button data-v="landscape">가로형 </button>
             </div>
           </div>
         </div>
